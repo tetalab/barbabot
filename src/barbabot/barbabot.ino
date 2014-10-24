@@ -3,69 +3,32 @@
  
  Program to control Barbabot Robotic Cocctail by Tetalab.
  25 syringe (0->24) and 4 bottle (25, 26, 27, 28).
- 
+ si bouteille quantité par 4cl (donc qté 2 = 8cl)
+ si seringue alors exprimé en ml.
+
  Created 23 Octobre 2014 : V.0
  by Flo Gales
  
  License Rien à branler.
  License Do What The Fuck You Want.
  */
+ 
+#include "config.h"
 
-#include <Stepper.h>
-
-const int STEP_PER_REVOLUTION = 200; //Default number of steps by revolution.
-
-/** PINS and CONSTANTS **/
-
-//CAROUSEL
-const int PIN_STEP_CAROUSEL = 12;  //Pin step carousel
-const int PIN_DIR_CAROUSEL = 13;   //Pin direction carousel
-const int PIN_CAROUSEL_ENDSTOP = 18;
-const int HIGH_CAROUSEL = HIGH;
-const int LOW_CAROUSEL = LOW;
+/** VARIABLES */
 int carouselEndstopState = 0;         // State of endstop of the carousel.
 int positionCarousel = 0; // Number of step from endstop of the carousel = position of the carousel.
-int stepToSyringe = 8; // Number of step to reach a syringe.
-int stepToBottle = 50; // Number of step to reach a bottle.
-int speedCarousel = 10; //delay between each step.
 
-//SYRINGE
-const int PIN_STEP_SYRINGE = 14;  //Pin step syringe
-const int PIN_DIR_SYRINGE = 15;   //Pin direction syringe
-const int PIN_SYRINGE_ENDSTOP = 19;
-const int HIGH_SYRINGE = HIGH;
-const int LOW_SYRINGE = LOW;
-const int PIN_SYRINGE_CONTACT = 20;
-const int STEP_TO_ML = 2; //Number of step for 1 ml
-int maxStepSyringe = 0; // maximum step.
-int speedSyringe = 10; //delay between each step.
 int syringeEndstopState = 0;         // State of endstop of the syringe arm.
 int syringeContactStopState = 0;         // State of microswitch who push on syringe of the carousel.
 int positionSyringe = 0; // Number of step from endstop of the syringe = position of the syringe.
 
-//BOTTLE
-const int PIN_STEP_BOTTLE = 16;  //Pin step bottle
-const int PIN_DIR_BOTTLE = 17;   //Pin direction bottle
-const int PIN_BOTTLE_ENDSTOP = 21;
-const int HIGH_BOTTLE = HIGH;
-const int LOW_BOTTLE = LOW;
-const int STEP_TO_PRESS_BOTTLE = 20; // Number of step to have 4cl from bottle.
 int bottleEndstopState = 0;         // State of endstop of the bottle arm.
 int positionBottle = 0; // Number of step from endstop of the arm dedicated to bottle = position of the syringe.
-int maxStepBottle = 0; // maximum step.
-int speedBottle = 10; //delay between each step.
 
-//ARM
-const int PIN_SLOT_ARM = 22;
 int armState = 0; //arm microswitch is pressed.
 
-/** COCKTAILS **/
-//10 cocktails max avec 5 ingrédients max chacun.
-int cocktails[10][5]={
-  {0,1,2,3,4},
-  {1,2,3,4,5},
-  {2,3,4,5,6}
-};
+Cocktail liste_cocktails[10];
 
 void setup() 
 {                
@@ -83,6 +46,14 @@ void setup()
   
   //Init random generator
   randomSeed(analogRead(0));
+  
+  //Init predefined cocktails.
+  liste_cocktails[0].name="Margarita";
+  liste_cocktails[0].author="Margarita Sames";
+  liste_cocktails[0].avis=4;
+  liste_cocktails[0].ingredient[0][0]=9; liste_cocktails[9].ingredient[0][1]=1;//Tequila 4cl.
+  liste_cocktails[0].ingredient[1][0]=4; liste_cocktails[9].ingredient[1][1]=30;//Cointreau 30ml.
+  liste_cocktails[0].ingredient[1][0]=8; liste_cocktails[9].ingredient[1][1]=30;//Jus de citron 20ml.
 }
 
 void loop() 
@@ -98,31 +69,61 @@ void loop()
   }
   
   //Random cocktail
-  int randNumber = random(sizeof(cocktails));
-  Serial.println("COCKTAIL => ");
-  Serial.println(randNumber);
+  int randNumber = random(sizeof(liste_cocktails));
+  
+  Serial.println("RANDOM COCKTAIL :");
+  Serial.println(" - NAME: " + liste_cocktails[randNumber].name);
+  Serial.println(" - AUTHOR: " + liste_cocktails[randNumber].author);
   
   //Let's do it.
-  makeCocktail(randNumber);
+  makeCocktail(liste_cocktails[randNumber]);
 }
 
 /*
-* Carousel go to 0.
+* Serve a cocktail.
 */
-void makeCocktail(int cocktailNumber) 
+void makeCocktail(Cocktail& cocktail) 
 {
-  //Récup recette.
-  int recette[sizeof(cocktails)] = {cocktails[cocktailNumber][0], cocktails[cocktailNumber][1], cocktails[cocktailNumber][2], cocktails[cocktailNumber][3], cocktails[cocktailNumber][4]}; //Parce que j'ai horreur des pointeurs.
+  Serial.println("begin make cocktail");
   //Put each ingredient.
-  for(int i=0;i<sizeof(cocktails);i++){
-    goToCarousel(cocktailNumber);
-    serveAlcohol(cocktailNumber, recette[i]);
+  for(int i=0; i<sizeof(cocktail.ingredient); i++){
+    int slot = findAlcohol(cocktail.ingredient[i][0], cocktail.ingredient[i][1]);
+    if(slot != -1){
+      goToCarousel(slot);
+      serveAlcohol(slot, cocktail.ingredient[i][1]);
+    }else{
+      Serial.println("Empty ingredient.Cannot continue. FILLED IT HUMAN!!");
+    }
   }
   Serial.println("end make cocktail");
 }
 
 /*
+* Find the correct alcohol from ingredient and remaining quantity.
+* @return int number of slot. Return -1 if ingredient is empty
+* From 0->24 : syringe
+* Form 25->25 : Bottle
+*/
+int findAlcohol(int alcoolNumber, int quantity) 
+{
+  Serial.println("begin findAlcohol");
+  int slot = -1;
+  
+  //Cycle through alcohol
+  for(int i = 0; i < sizeof(BAR); i++){
+    if(BAR[i][0] == alcoolNumber && BAR[i][1] >= quantity){ //if right alcohol and good amount.
+      slot = i; 
+    }
+  }
+  
+  Serial.println("end findAlcohol");
+  return slot;
+}
+
+/*
 * Move carousel to specific number.
+* From 0->24 : syringe
+* Form 25->25 : Bottle
 */
 void goToCarousel(int alcoolNumber) 
 {
@@ -130,9 +131,9 @@ void goToCarousel(int alcoolNumber)
   int numberOfStepFromBegin = 0;
   //If it's a syringe.
   if(alcoolNumber<25){
-    numberOfStepFromBegin = numberOfStepFromBegin * stepToSyringe;
+    numberOfStepFromBegin = numberOfStepFromBegin * STEP_TO_SYRINGE;
   }else{
-    numberOfStepFromBegin = numberOfStepFromBegin * stepToBottle;
+    numberOfStepFromBegin = numberOfStepFromBegin * STEP_TO_BOTTLE;
   }
   
   if(numberOfStepFromBegin < positionCarousel){//clockwise turn.
@@ -144,7 +145,7 @@ void goToCarousel(int alcoolNumber)
   while(positionCarousel != numberOfStepFromBegin){
     //Move on
     digitalWrite(PIN_STEP_CAROUSEL, HIGH_CAROUSEL);   
-    delay(speedCarousel);
+    delay(SPEED_CAROUSEL);
     digitalWrite(PIN_STEP_CAROUSEL, LOW_CAROUSEL);
     
     positionCarousel++;
@@ -154,35 +155,35 @@ void goToCarousel(int alcoolNumber)
 }
 
 /*
-* Move carousel to specific number.
+* Serve Alcohol (bottle or syringe).
 */
-void serveAlcohol(int alcoolNumber, int quantity) 
+void serveAlcohol(int slot, int quantity) 
 {
   Serial.println("begin serveAlcohol");
   int numberOfStepFromBegin = 0;
   //If it's a syringe.
-  if(alcoolNumber<25){
+  if(slot<25){
     
     //Move until syringe switch
     digitalWrite(PIN_DIR_SYRINGE, HIGH_SYRINGE);
     while(syringeContactStopState == 0){
       //Move on
       digitalWrite(PIN_STEP_SYRINGE, HIGH);   
-      delay(speedSyringe);
+      delay(SPEED_SYRINGE);
       digitalWrite(PIN_STEP_SYRINGE, LOW);
       //Read value of endstop. 
       syringeContactStopState = digitalRead(PIN_SYRINGE_CONTACT);
     }
-    
-    //TODO : Ajouter check si seringue vide.
-    
+   
     //Move according quantity.
     for(int i = 0;i<(quantity/STEP_TO_ML);i++){
       //Move on
       digitalWrite(PIN_STEP_SYRINGE, HIGH);   
-      delay(speedSyringe);
+      delay(SPEED_SYRINGE);
       digitalWrite(PIN_STEP_SYRINGE, LOW);
     }
+    //decrease quantity in memory.
+    BAR[slot][1] -= quantity;
     
     initSyringe();
     
@@ -192,11 +193,14 @@ void serveAlcohol(int alcoolNumber, int quantity)
       for(int j = 0; j<STEP_TO_PRESS_BOTTLE; j++){
         //Move on
         digitalWrite(PIN_STEP_SYRINGE, HIGH);   
-        delay(speedBottle);
+        delay(SPEED_BOTTLE);
         digitalWrite(PIN_STEP_SYRINGE, LOW);
       }
       initBottle();
     }
+    
+    //decrease quantity in memory.
+    BAR[slot][1] -= quantity;
   }
   
   Serial.println("end serveAlcohol");
@@ -213,7 +217,7 @@ void initCarousel()
   while(carouselEndstopState == 0){
     //Move on
     digitalWrite(PIN_STEP_CAROUSEL, HIGH);   
-    delay(speedCarousel);
+    delay(SPEED_CAROUSEL);
     digitalWrite(PIN_STEP_CAROUSEL, LOW);
     //Read value of endstop. 
     carouselEndstopState = digitalRead(PIN_CAROUSEL_ENDSTOP);
@@ -233,7 +237,7 @@ void initSyringe()
   while(syringeEndstopState == 0){
     //Move on
     digitalWrite(PIN_STEP_SYRINGE, HIGH);   
-    delay(speedSyringe);
+    delay(SPEED_SYRINGE);
     digitalWrite(PIN_STEP_SYRINGE, LOW);
     //Read value of endstop. 
     syringeEndstopState = digitalRead(PIN_SYRINGE_ENDSTOP);
@@ -254,7 +258,7 @@ void initBottle()
   while(bottleEndstopState == 0){
     //Move on
     digitalWrite(PIN_STEP_BOTTLE, HIGH);   
-    delay(speedBottle);
+    delay(SPEED_BOTTLE);
     digitalWrite(PIN_STEP_BOTTLE, LOW);
     //Read value of endstop. 
     bottleEndstopState = digitalRead(PIN_BOTTLE_ENDSTOP);
