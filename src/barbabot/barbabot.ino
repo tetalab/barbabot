@@ -25,8 +25,8 @@ const int HIGH_CAROUSEL = HIGH;
 const int LOW_CAROUSEL = LOW;
 int carouselEndstopState = 0;         // State of endstop of the carousel.
 int positionCarousel = 0; // Number of step from endstop of the carousel = position of the carousel.
-int stepToSyringe = 8 // Number of step to reach a syringe.
-int stepToBottle = 50 // Number of step to reach a bottle.
+int stepToSyringe = 8; // Number of step to reach a syringe.
+int stepToBottle = 50; // Number of step to reach a bottle.
 int speedCarousel = 10; //delay between each step.
 
 //SYRINGE
@@ -62,10 +62,10 @@ int armState = 0; //arm microswitch is pressed.
 /** COCKTAILS **/
 //10 cocktails max avec 5 ingrédients max chacun.
 int cocktails[10][5]={
-  {0,1,2,3,4,5},
-  {1,2,3,4,5,6},
-  {2,3,4,5,6,7},
-}
+  {0,1,2,3,4},
+  {1,2,3,4,5},
+  {2,3,4,5,6}
+};
 
 void setup() 
 {                
@@ -98,11 +98,12 @@ void loop()
   }
   
   //Random cocktail
-  randNumber = random(sizeof(cocktails));
+  int randNumber = random(sizeof(cocktails));
   Serial.println("COCKTAIL => ");
   Serial.println(randNumber);
   
   //Let's do it.
+  makeCocktail(randNumber);
 }
 
 /*
@@ -111,11 +112,11 @@ void loop()
 void makeCocktail(int cocktailNumber) 
 {
   //Récup recette.
-  int recette[sizeof(cocktails)] = cocktails;
+  int recette[sizeof(cocktails)] = {cocktails[cocktailNumber][0], cocktails[cocktailNumber][1], cocktails[cocktailNumber][2], cocktails[cocktailNumber][3], cocktails[cocktailNumber][4]}; //Parce que j'ai horreur des pointeurs.
   //Put each ingredient.
   for(int i=0;i<sizeof(cocktails);i++){
-    goToCarousel(recette[i]);
-    serveAlcohol(recette[i]);
+    goToCarousel(cocktailNumber);
+    serveAlcohol(cocktailNumber, recette[i]);
   }
   Serial.println("end make cocktail");
 }
@@ -176,7 +177,7 @@ void serveAlcohol(int alcoolNumber, int quantity)
     //TODO : Ajouter check si seringue vide.
     
     //Move according quantity.
-    while(int i = 0;i<quantity/stepToMl;i++){
+    for(int i = 0;i<(quantity/STEP_TO_ML);i++){
       //Move on
       digitalWrite(PIN_STEP_SYRINGE, HIGH);   
       delay(speedSyringe);
@@ -188,7 +189,7 @@ void serveAlcohol(int alcoolNumber, int quantity)
   }else{
     //In cas of bottle quantity = 1 push of bottle = 4cl
     for(int i = 0; i<quantity;i++){
-      while(int j = 0; j<STEP_TO_PRESS_BOTTLE; j++){
+      for(int j = 0; j<STEP_TO_PRESS_BOTTLE; j++){
         //Move on
         digitalWrite(PIN_STEP_SYRINGE, HIGH);   
         delay(speedBottle);
