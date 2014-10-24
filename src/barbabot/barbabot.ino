@@ -3,7 +3,7 @@
  
  Program to control Barbabot Robotic Cocctail by Tetalab.
  25 syringe (0->24) and 4 bottle (25, 26, 27, 28).
- si bouteille quantité par 4cl (donc qté 2 = 8cl)
+ si bouteille quantité par 40ml (donc qté 2 = 80ml)
  si seringue alors exprimé en ml.
 
  Created 23 Octobre 2014 : V.0
@@ -28,7 +28,7 @@ int positionBottle = 0; // Number of step from endstop of the arm dedicated to b
 
 int armState = 0; //arm microswitch is pressed.
 
-Cocktail liste_cocktails[10];
+
 
 void setup() 
 {                
@@ -47,13 +47,7 @@ void setup()
   //Init random generator
   randomSeed(analogRead(0));
   
-  //Init predefined cocktails.
-  liste_cocktails[0].name="Margarita";
-  liste_cocktails[0].author="Margarita Sames";
-  liste_cocktails[0].avis=4;
-  liste_cocktails[0].ingredient[0][0]=9; liste_cocktails[9].ingredient[0][1]=1;//Tequila 4cl.
-  liste_cocktails[0].ingredient[1][0]=4; liste_cocktails[9].ingredient[1][1]=30;//Cointreau 30ml.
-  liste_cocktails[0].ingredient[1][0]=8; liste_cocktails[9].ingredient[1][1]=30;//Jus de citron 20ml.
+  
 }
 
 void loop() 
@@ -62,6 +56,8 @@ void loop()
   initCarousel();
   initSyringe();
   initBottle();
+  
+  Serial.println("PULL SLOT ARM TO PLAY. FUCKER!");
   
   //Waiting for slot arm
   while(armState == 0){
@@ -188,8 +184,8 @@ void serveAlcohol(int slot, int quantity)
     initSyringe();
     
   }else{
-    //In cas of bottle quantity = 1 push of bottle = 4cl
-    for(int i = 0; i<quantity;i++){
+    //In cas of bottle (1 push of bottle = 40ml)
+    for(int i = 0; i<(quantity/40);i++){
       for(int j = 0; j<STEP_TO_PRESS_BOTTLE; j++){
         //Move on
         digitalWrite(PIN_STEP_SYRINGE, HIGH);   
