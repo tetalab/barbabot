@@ -1,6 +1,8 @@
 #include<Arduino.h>
 
 /** PINS and CONSTANTS **/
+//DEBUG MODE 
+const bool DEBUG_MODE = true;
 
 //CAROUSEL
 const int STEP_PER_REVOLUTION = 200; //Default number of steps by revolution for the stepper.
@@ -65,11 +67,10 @@ typedef struct{
 * 12 = Absinthe
 * 13 = Perrier
 */
-const char* INGREDIENT[13] = {
-  {"vide", "vodka","rhum", "Cointreau", "Orange juice", "Curacao", "Liquid cane sugar", "Lime juice", "Tequila", "Cranberry juice", "Bailey", "Absinthe"};
+const char* INGREDIENTS[13] = {"vide", "vodka","rhum", "Cointreau", "Orange juice", "Curacao", "Liquid cane sugar", "Lime juice", "Tequila", "Cranberry juice", "Bailey", "Absinthe"};
 
 // Composition du carousel avec qté restante.
-const int BAR[29][2]{
+int BAR[29][2]={
   {8, 100}, // jus de citron
   {8, 100}, // jus de citron
   {4, 100}, // cointreau
@@ -99,7 +100,8 @@ const int BAR[29][2]{
   {3, 750}, // Rhum
   {9, 750}, // Tequila
   {13, 750} // Perrier
-}
+};
+
 Cocktail liste_cocktails[10];
 
 void initListeCocktails(){
@@ -145,6 +147,6 @@ void initListeCocktails(){
   liste_cocktails[5].avis=4;
   liste_cocktails[5].ingredient[0][0]=13; liste_cocktails[9].ingredient[0][1]=80;//Perrier 8cl (normalement 6 mais bon).
   liste_cocktails[5].ingredient[1][0]=12; liste_cocktails[9].ingredient[1][1]=30;//Absinthe 30ml.
-  liste_cocktails[5].ingredient[1][0]=5; liste_cocktails[9].ingredient[1][1]=30;//Jus d'orange 30ml.
-  liste_cocktails[5].ingredient[1][0]=7; liste_cocktails[9].ingredient[1][1]=20;//sucre de canne liquide 20ml.
+  liste_cocktails[5].ingredient[2][0]=5; liste_cocktails[9].ingredient[2][1]=30;//Jus d'orange 30ml.
+  liste_cocktails[5].ingredient[3][0]=7; liste_cocktails[9].ingredient[3][1]=20;//sucre de canne liquide 20ml.
 }
