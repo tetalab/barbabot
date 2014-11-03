@@ -1,7 +1,7 @@
 #include<Arduino.h>
 
 /** PINS and CONSTANTS **/
-int nbStepForRevolutionHastaSiempreCommandante = 750;
+int nbStepForRevolutionHastaSiempreCommandante = 800;
 
 //DEBUG MODE 
 const bool DEBUG_MODE = true;
@@ -13,7 +13,7 @@ const int PIN_STEP_CAROUSEL = 25;  //Pin step carousel
 const int PIN_CAROUSEL_ENDSTOP = 7;
 const int HIGH_CAROUSEL = LOW;
 const int LOW_CAROUSEL = HIGH;
-const int SPEED_CAROUSEL = 40; //delay between each step.
+const int SPEED_CAROUSEL = 35; //delay between each step.
 
 //SYRINGE
 const int PIN_STEP_SYRINGE = 27;  //Pin step syringe
@@ -22,21 +22,20 @@ const int PIN_SYRINGE_ENDSTOP = 5;
 const int HIGH_SYRINGE = HIGH;
 const int LOW_SYRINGE = LOW;
 const int PIN_SYRINGE_CONTACT = 6;
-const int STEP_TO_ML = 2; //Number of step for 1 ml
-const int MAX_STEP_SYRINGE = 0; // maximum step to push a syringe until it destroy everything.
-const int SPEED_SYRINGE = 5; //delay between each step.
-int STEP_TO_SYRINGE = nbStepForRevolutionHastaSiempreCommandante/23; // Number of step to reach a syringe.
+const int STEP_TO_ML = 160; //Number of step for 1 ml 10
+const int MAX_STEP_SYRINGE = 16000; // maximum step to push a syringe until it destroy everything.
+const int SPEED_SYRINGE = 3; //delay between each step.
+int STEP_TO_SYRINGE = 34; // Number of step to reach a syringe.
 
 //BOTTLE
-const int PIN_STEP_BOTTLE = 17;  //Pin step bottle
-const int PIN_DIR_BOTTLE = 16;   //Pin direction bottle
-const int PIN_BOTTLE_ENDSTOP = 21;
-const int HIGH_BOTTLE = HIGH;
-const int LOW_BOTTLE = LOW;
-const int STEP_TO_PRESS_BOTTLE = 20; // Number of step to have 40ml from bottle.
+const int PIN_STEP_BOTTLE = 29;  //Pin step bottle
+const int PIN_DIR_BOTTLE = 28;   //Pin direction bottle
+const int HIGH_BOTTLE = LOW;
+const int LOW_BOTTLE = HIGH;
+const int STEP_TO_PRESS_BOTTLE = 4000; // Number of step to have 40ml from bottle.
 const int MAX_STEP_BOTTLE = 0; // maximum step to push the arm of the dispenser.
-const int SPEED_BOTTLE = 10; //delay between each step.
-int STEP_TO_BOTTLE = nbStepForRevolutionHastaSiempreCommandante/20; // Number of step between each bottle.
+const int SPEED_BOTTLE = 3; //delay between each step.
+int STEP_TO_BOTTLE = 210; // Number of step between each bottle.
 
 //ARM
 const int PIN_SLOT_ARM = 12;
@@ -99,10 +98,10 @@ int BAR[SIZEOF_BAR][2]={
   {0, 100},
   {0, 100},
   {0, 100},
-  {2, 750}, // Vodka
-  {3, 750}, // Rhum
-  {9, 750}, // Tequila
-  {13, 750} // Perrier
+  {2, 750}, // 22 Vodka
+  {9, 750}, // 23 Tequila
+  {3, 750}, // 24 Rhum
+  {13, 750} // 25 Perrier
 };
 
 const int NUMBER_OF_COCKTAILS = 1;

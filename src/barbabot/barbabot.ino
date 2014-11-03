@@ -3,8 +3,8 @@
  
  Program to control Barbabot Robotic Cocctail by Tetalab.
  23 syringe (0->22) and 4 bottle (23, 24, 25, 26).
- si bouteille quantité par 40ml (donc qté 2 = 80ml)
- si seringue alors exprimé en ml.
+ si bouteille quantité par multiple de 40ml
+ si seringue alors exprimé en max 100ml.
 
  Created 23 Octobre 2014 : V.0
  by Flo Gales
@@ -56,9 +56,9 @@ void loop()
   //serviceMode(); //uncomment to activate service mode.
   
   //Init of the bordel
-  initCarousel();
   initSyringe();
   initBottle();
+  initCarousel();
   initListeCocktails();
   
   Serial.println("PULL SLOT ARM TO PLAY. FUCKER!");
@@ -80,22 +80,6 @@ void loop()
 }
 
 /*
-* Service mode
-*/
-void serviceMode() 
-{
-  Serial.println("SERVICE MODE");
-  
-  while(1 == 1){
-    Serial.println("ARM STATE="); Serial.println(digitalRead(PIN_SLOT_ARM));
-    Serial.println("MIN SYRINGE="); Serial.println(digitalRead(PIN_SYRINGE_ENDSTOP));
-    Serial.println("CONTACT SYRINGE="); Serial.println(digitalRead(PIN_SYRINGE_CONTACT));
-    Serial.println("MIN CAROUSEL="); Serial.println(digitalRead(PIN_CAROUSEL_ENDSTOP));
-    delay(3000);
-  }
-}
-
-/*
 * Serve a cocktail.
 */
 void makeCocktail(Cocktail cocktail) 
@@ -105,7 +89,7 @@ void makeCocktail(Cocktail cocktail)
   //Put each ingredient.
   for(int i=0; i<sizeof(cocktail.ingredient[0]); i++){
     if(cocktail.ingredient[i][0] != NULL){
-      DEBUG(String("Serving ") + String(cocktail.ingredient[i][1])+ String("ml of ")+ String(INGREDIENTS[cocktail.ingredient[i][0]]));
+      Serial.println(String("Serving ") + String(cocktail.ingredient[i][1])+ String("ml of ")+ String(INGREDIENTS[cocktail.ingredient[i][0]]));
       
       int slot = findAlcohol(cocktail.ingredient[i][0], cocktail.ingredient[i][1]);
       if(slot != -1){
@@ -117,7 +101,7 @@ void makeCocktail(Cocktail cocktail)
     }
   }
   
-  if(DEBUG_MODE) Serial.println("end make cocktail");
+  DEBUG("end make cocktail");
 }
 
 /*
@@ -128,7 +112,7 @@ void makeCocktail(Cocktail cocktail)
 */
 int findAlcohol(int alcoolNumber, int quantity) 
 {
-  if(DEBUG_MODE) Serial.println(String("begin findAlcohol alcoolNumber=") + String(alcoolNumber, DEC) + String ("qty=") + String(quantity, DEC));
+  DEBUG(String("begin findAlcohol alcoolNumber=") + String(alcoolNumber, DEC) + String ("qty=") + String(quantity, DEC));
   int slot = -1;
   
   //Cycle through alcohol
@@ -140,14 +124,11 @@ int findAlcohol(int alcoolNumber, int quantity)
     }
   }
   
-  if(DEBUG_MODE) Serial.println(String("end findAlcohol") + String(slot, DEC));
+  DEBUG(String("end findAlcohol") + String(slot, DEC));
   return slot;
 }
 
-void DEBUG(String string){
-  if(DEBUG_MODE) Serial.println(string);
-  
-}
+
 /*
 * Move carousel to specific number.
 * From 0->22 : syringe
@@ -155,14 +136,17 @@ void DEBUG(String string){
 */
 void goToCarousel(int alcoolNumber) 
 {
-  DEBUG("begin goToCarousel");
+  DEBUG("begin goToCarousel alcoolNumber");
+  
   int numberOfStepFromBegin = 0;
   int deltaStep = 0;
   //If it's a syringe.
   if(alcoolNumber<23){
-    numberOfStepFromBegin = alcoolNumber * STEP_TO_SYRINGE;
+    numberOfStepFromBegin = (alcoolNumber-1) * STEP_TO_SYRINGE;
+    DEBUG(String("SERINGUE NUM=") + String(alcoolNumber, DEC));
   }else{
     numberOfStepFromBegin = (alcoolNumber-23) * STEP_TO_BOTTLE;
+    DEBUG(String("BOUTEILLE NUM=") + String(alcoolNumber-23, DEC));
   }
   
   DEBUG(String("positionCarousel=") + String(positionCarousel, DEC));
@@ -175,7 +159,9 @@ void goToCarousel(int alcoolNumber)
     digitalWrite(PIN_DIR_CAROUSEL, LOW_CAROUSEL);
     deltaStep = positionCarousel - numberOfStepFromBegin;
   }
+  
   DEBUG(String("delta=") + String(deltaStep, DEC));
+  
   for(int i=0; i<=deltaStep;i++){
     //Move on
     digitalWrite(PIN_STEP_CAROUSEL, HIGH);   
@@ -184,7 +170,7 @@ void goToCarousel(int alcoolNumber)
   }
   positionCarousel = numberOfStepFromBegin;
   
-  if(DEBUG_MODE) Serial.println("end goToCarousel");
+  DEBUG("end goToCarousel");
 }
 
 /*
@@ -192,7 +178,7 @@ void goToCarousel(int alcoolNumber)
 */
 void serveAlcohol(int slot, int quantity) 
 {
-  if(DEBUG_MODE) Serial.println("begin serveAlcohol");
+  DEBUG(String("begin serveAlcohol slot=") + String(slot, DEC));
   
   int numberOfStepFromBegin = 0;
   //If it's a syringe.
@@ -200,22 +186,31 @@ void serveAlcohol(int slot, int quantity)
     
     //Move until syringe switch
     digitalWrite(PIN_DIR_SYRINGE, HIGH_SYRINGE);
-    while(syringeContactStopState == 1){
+    syringeContactStopState = digitalRead(PIN_SYRINGE_CONTACT);
+    DEBUG(String("syringeContactStopState=") + String(syringeContactStopState, DEC));
+    while(syringeContactStopState == 1 && numberOfStepFromBegin < MAX_STEP_SYRINGE){
       //Move on
       digitalWrite(PIN_STEP_SYRINGE, HIGH);   
       delay(SPEED_SYRINGE);
       digitalWrite(PIN_STEP_SYRINGE, LOW);
       //Read value of endstop. 
       syringeContactStopState = digitalRead(PIN_SYRINGE_CONTACT);
+      numberOfStepFromBegin++;
     }
-   
+    
     //Move according quantity.
-    for(int i = 0;i<(quantity/STEP_TO_ML);i++){
-      //Move on
-      digitalWrite(PIN_STEP_SYRINGE, HIGH);   
-      delay(SPEED_SYRINGE);
-      digitalWrite(PIN_STEP_SYRINGE, LOW);
+    for(int i = 0;i<(quantity * STEP_TO_ML);i++){
+      if(numberOfStepFromBegin < MAX_STEP_SYRINGE){
+        //Move on
+         digitalWrite(PIN_STEP_SYRINGE, HIGH);   
+         delay(SPEED_SYRINGE);
+         digitalWrite(PIN_STEP_SYRINGE, LOW);
+         numberOfStepFromBegin++;
+      }
     }
+    
+    DEBUG(String("numberOfStepFromBegin=") + String(numberOfStepFromBegin, DEC));
+    
     //decrease quantity in memory.
     BAR[slot][1] -= quantity;
     
@@ -224,11 +219,13 @@ void serveAlcohol(int slot, int quantity)
   }else{
     //In cas of bottle (1 push of bottle = 40ml)
     for(int i = 0; i<(quantity/40);i++){
+      digitalWrite(PIN_DIR_BOTTLE, HIGH_BOTTLE);
       for(int j = 0; j<STEP_TO_PRESS_BOTTLE; j++){
         //Move on
-        digitalWrite(PIN_STEP_SYRINGE, HIGH);   
+        digitalWrite(PIN_STEP_BOTTLE, HIGH);   
         delay(SPEED_BOTTLE);
-        digitalWrite(PIN_STEP_SYRINGE, LOW);
+        digitalWrite(PIN_STEP_BOTTLE, LOW);
+        positionBottle++;
       }
       initBottle();
     }
@@ -237,7 +234,7 @@ void serveAlcohol(int slot, int quantity)
     BAR[slot][1] -= quantity;
   }
   
-  if(DEBUG_MODE) Serial.println("end serveAlcohol");
+  DEBUG("end serveAlcohol");
 }
 
 /*
@@ -246,9 +243,11 @@ void serveAlcohol(int slot, int quantity)
 int initCarousel() 
 {
   int nbStep = 0;
-  if(DEBUG_MODE) Serial.println("begin init carousel");
+  DEBUG("begin init carousel");
+  
   //While endstop not reach.
   digitalWrite(PIN_DIR_CAROUSEL, LOW_CAROUSEL);
+  carouselEndstopState = digitalRead(PIN_CAROUSEL_ENDSTOP);
   while(carouselEndstopState == 1){
     //Move on
     digitalWrite(PIN_STEP_CAROUSEL, HIGH);   
@@ -271,6 +270,7 @@ int initCarousel()
     carouselEndstopState = digitalRead(PIN_CAROUSEL_ENDSTOP);
   }
   positionCarousel = 0;
+  
   DEBUG(String("end init carousel nbStepForRevolutionHastaSiempreCommandante=") + String(nbStep, DEC));
   return nbStep;
 }
@@ -280,9 +280,10 @@ int initCarousel()
 */
 void initSyringe() 
 {
-  if(DEBUG_MODE) Serial.println("begin init syringe");
+  DEBUG("begin init syringe");
   //While endstop not reach.
   digitalWrite(PIN_DIR_SYRINGE, LOW_SYRINGE);
+  syringeEndstopState = digitalRead(PIN_SYRINGE_ENDSTOP);
   while(syringeEndstopState == 1){ //reversed microswitch
     //Move on
     digitalWrite(PIN_STEP_SYRINGE, HIGH);   
@@ -292,8 +293,7 @@ void initSyringe()
     syringeEndstopState = digitalRead(PIN_SYRINGE_ENDSTOP);
   }
   positionSyringe = 0;
-  syringeContactStopState = 0;
-  if(DEBUG_MODE) Serial.println("end init syringe");
+  DEBUG("end init syringe");
 }
 
 /*
@@ -301,18 +301,38 @@ void initSyringe()
 */
 void initBottle() 
 {
-  if(DEBUG_MODE) Serial.println("begin init bottle arm");
+  DEBUG("begin init bottle arm");
   //While endstop not reach.
   digitalWrite(PIN_DIR_BOTTLE, LOW_BOTTLE);
-  while(bottleEndstopState == 0){
+  while(positionBottle > 0){
     //Move on
     digitalWrite(PIN_STEP_BOTTLE, HIGH);   
     delay(SPEED_BOTTLE);
     digitalWrite(PIN_STEP_BOTTLE, LOW);
-    //Read value of endstop. 
-    bottleEndstopState = digitalRead(PIN_BOTTLE_ENDSTOP);
+    positionBottle--;
   }
   positionBottle = 0;
-  if(DEBUG_MODE) Serial.println("end init bottle arm");
+  DEBUG("end init bottle arm");
+}
+
+/*
+* Service mode
+*/
+void serviceMode() 
+{
+  DEBUG("SERVICE MODE");
+  
+  while(1 == 1){
+    DEBUG(String("ARM STATE=") + String(digitalRead(PIN_SLOT_ARM), DEC));
+    DEBUG(String("MIN SYRINGE=") + String(digitalRead(PIN_SYRINGE_ENDSTOP), DEC));
+    DEBUG(String("CONTACT SYRINGE=") + String(digitalRead(PIN_SYRINGE_CONTACT), DEC));
+    DEBUG(String("MIN CAROUSEL=") + String(digitalRead(PIN_CAROUSEL_ENDSTOP), DEC));
+    delay(3000);
+  }
+}
+
+void DEBUG(String string){
+  if(DEBUG_MODE) Serial.println(string);
+  
 }
 
