@@ -1,16 +1,17 @@
-#include<Arduino.h>
+//#include<Arduino.h>
+#include "Minitel.h"
 
 /** PINS and CONSTANTS **/
 int nbStepForRevolutionHastaSiempreCommandante = 800;
 
-//DEBUG MODE 
+//DEBUG MODE on Serial
 const bool DEBUG_MODE = true;
 
 //CAROUSEL
 const int STEP_PER_REVOLUTION = 200; //Default number of steps by revolution for the stepper.
 const int PIN_DIR_CAROUSEL = 24;   //Pin direction carousel
 const int PIN_STEP_CAROUSEL = 25;  //Pin step carousel
-const int PIN_CAROUSEL_ENDSTOP = 7;
+const int PIN_CAROUSEL_ENDSTOP = 7; //yellow wire
 const int HIGH_CAROUSEL = LOW;
 const int LOW_CAROUSEL = HIGH;
 const int SPEED_CAROUSEL = 35; //delay between each step.
@@ -18,10 +19,10 @@ const int SPEED_CAROUSEL = 35; //delay between each step.
 //SYRINGE
 const int PIN_STEP_SYRINGE = 27;  //Pin step syringe
 const int PIN_DIR_SYRINGE = 26;   //Pin direction syringe
-const int PIN_SYRINGE_ENDSTOP = 5;
+const int PIN_SYRINGE_ENDSTOP = 5; // brown wire
 const int HIGH_SYRINGE = HIGH;
 const int LOW_SYRINGE = LOW;
-const int PIN_SYRINGE_CONTACT = 6;
+const int PIN_SYRINGE_CONTACT = 6; //red wire
 const int STEP_TO_ML = 160; //Number of step for 1 ml 10
 const int MAX_STEP_SYRINGE = 16000; // maximum step to push a syringe until it destroy everything.
 const int SPEED_SYRINGE = 3; //delay between each step.
@@ -38,7 +39,7 @@ const int SPEED_BOTTLE = 3; //delay between each step.
 int STEP_TO_BOTTLE = 210; // Number of step between each bottle.
 
 //ARM
-const int PIN_SLOT_ARM = 12;
+const int PIN_SLOT_ARM = 12; //red wire
 
 //DIVERS
 const int MAX_VERRE_ML = 200; //Qt� maximale d'un verre.

@@ -7,7 +7,9 @@
  si seringue alors exprimé en max 100ml.
 
  Created 23 Octobre 2014 : V.0
- by Flo Gales
+ by Flo Gales with Tetalab.
+ 
+ Modified Minitel library by Minitel library for Arduino (v0.1) / May 2013 http://github.com/01010101/Minitel
  
  License Rien à branler.
  License Do What The Fuck You Want.
@@ -28,7 +30,7 @@ int positionBottle = 0; // Number of step from endstop of the arm dedicated to b
 
 int armState = LOW; //arm microswitch is pressed.
 
-
+//Minitel minitel;
 
 void setup() 
 {                
@@ -44,26 +46,31 @@ void setup()
   pinMode(PIN_SYRINGE_CONTACT, INPUT);
   pinMode(PIN_SLOT_ARM, INPUT);
   
-  // Init Serial port:
+  // Serial for debugging
   Serial.begin(9600);
-  
+  UCSR1C = B00100100;
+  Serial1.begin(1200);
+  Serial1.write(12);
   //Init random generator
   randomSeed(analogRead(0));
 }
+
 
 void loop() 
 {
   //serviceMode(); //uncomment to activate service mode.
   
-  //Init of the bordel
+  // Init of the bordel
   initSyringe();
   initBottle();
   initCarousel();
   initListeCocktails();
   
-  Serial.println("PULL SLOT ARM TO PLAY. FUCKER!");
   
   //Waiting for slot arm
+  Serial1.write(14);
+  Serial1.write(12);
+  Serial1.write("PULL SLOT ARM TO PLAY.");
   while(armState == 0){
     armState = digitalRead(PIN_SLOT_ARM);
   }
@@ -71,12 +78,17 @@ void loop()
   
   //Random cocktail
   int randNumber = random(NUMBER_OF_COCKTAILS);
-  Serial.println("RANDOM COCKTAIL :");Serial.println(randNumber);
-  Serial.println(" - NAME: " + liste_cocktails[randNumber].name);
-  Serial.println(" - AUTHOR: " + liste_cocktails[randNumber].author);
+  Serial1.write(DOWN);Serial1.write(13);
+  Serial1.write(13);
+  Serial1.write("COCKTAIL :");
+  Serial1.write(DOWN);Serial1.write(13);
+  Serial1.print(String(" - NAME: ") + String(liste_cocktails[randNumber].name));
+  Serial1.write(DOWN);Serial1.write(13);
+  Serial1.print(" - AUTHOR: " + liste_cocktails[randNumber].author);
   
   //Let's do it.
   makeCocktail(liste_cocktails[randNumber]);
+
 }
 
 /*
@@ -89,14 +101,16 @@ void makeCocktail(Cocktail cocktail)
   //Put each ingredient.
   for(int i=0; i<sizeof(cocktail.ingredient[0]); i++){
     if(cocktail.ingredient[i][0] != NULL){
-      Serial.println(String("Serving ") + String(cocktail.ingredient[i][1])+ String("ml of ")+ String(INGREDIENTS[cocktail.ingredient[i][0]]));
+      Serial1.write(DOWN);
+      Serial1.print(String("Serving ") + String(cocktail.ingredient[i][1])+ String("ml of ")+ String(INGREDIENTS[cocktail.ingredient[i][0]]));
       
       int slot = findAlcohol(cocktail.ingredient[i][0], cocktail.ingredient[i][1]);
       if(slot != -1){
         goToCarousel(slot);
         serveAlcohol(slot, cocktail.ingredient[i][1]);
       }else{
-        Serial.println("Empty ingredient.Cannot continue. FILLED IT HUMAN!!");
+        Serial1.write(DOWN);
+        Serial1.write("Empty ingredient.Cannot continue. FILLED IT HUMAN!!");
       }
     }
   }
