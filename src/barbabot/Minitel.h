@@ -187,6 +187,7 @@ public :
 	void cursor();
 	void noCursor();
 	void clearScreen();
+        void clearLine(int y);
 	void graphicMode();
 	void textMode();
 	void blink();
@@ -203,12 +204,14 @@ public :
 	void transparentVideo();
 	void setMaxSpeed();
 	void bip(long duration);
+        void bip();
 	char getKey();
 	byte getKeyCode();
 	boolean isMenuKey();
 	void rect(char c, int x, int y, int w, int h);
 	void rect(byte c, int x, int y, int w, int h);
 	void spiral(int x, int y, int siz, int c);
+        String getKey2();
 
 };
 

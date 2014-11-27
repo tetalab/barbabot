@@ -8,41 +8,41 @@ int nbStepForRevolutionHastaSiempreCommandante = 800;
 const bool DEBUG_MODE = true;
 
 //CAROUSEL
-const int STEP_PER_REVOLUTION = 200; //Default number of steps by revolution for the stepper.
-const int PIN_DIR_CAROUSEL = 24;   //Pin direction carousel
-const int PIN_STEP_CAROUSEL = 25;  //Pin step carousel
-const int PIN_CAROUSEL_ENDSTOP = 7; //yellow wire
-const int HIGH_CAROUSEL = LOW;
-const int LOW_CAROUSEL = HIGH;
-const int SPEED_CAROUSEL = 35; //delay between each step.
+#define STEP_PER_REVOLUTION 200 //Default number of steps by revolution for the stepper.
+#define PIN_DIR_CAROUSEL 24   //Pin direction carousel
+#define PIN_STEP_CAROUSEL 25  //Pin step carousel
+#define PIN_CAROUSEL_ENDSTOP 7 //yellow wire
+#define HIGH_CAROUSEL LOW
+#define LOW_CAROUSEL HIGH
+#define SPEED_CAROUSEL 35 //delay between each step.
 
 //SYRINGE
-const int PIN_STEP_SYRINGE = 27;  //Pin step syringe
-const int PIN_DIR_SYRINGE = 26;   //Pin direction syringe
-const int PIN_SYRINGE_ENDSTOP = 5; // brown wire
-const int HIGH_SYRINGE = HIGH;
-const int LOW_SYRINGE = LOW;
-const int PIN_SYRINGE_CONTACT = 6; //red wire
-const int STEP_TO_ML = 160; //Number of step for 1 ml 10
-const int MAX_STEP_SYRINGE = 16000; // maximum step to push a syringe until it destroy everything.
-const int SPEED_SYRINGE = 3; //delay between each step.
-int STEP_TO_SYRINGE = 34; // Number of step to reach a syringe.
+#define PIN_STEP_SYRINGE 27  //Pin step syringe
+#define PIN_DIR_SYRINGE 26   //Pin direction syringe
+#define PIN_SYRINGE_ENDSTOP 5 // brown wire
+#define HIGH_SYRINGE HIGH
+#define LOW_SYRINGE LOW
+#define PIN_SYRINGE_CONTACT 6 //red wire
+#define STEP_TO_ML 160 //Number of step for 1 ml 10
+#define MAX_STEP_SYRINGE 16000 // maximum step to push a syringe until it destroy everything.
+#define SPEED_SYRINGE 3 //delay between each step.
+#define STEP_TO_SYRINGE 34 // Number of step to reach a syringe.
 
 //BOTTLE
-const int PIN_STEP_BOTTLE = 29;  //Pin step bottle
-const int PIN_DIR_BOTTLE = 28;   //Pin direction bottle
-const int HIGH_BOTTLE = LOW;
-const int LOW_BOTTLE = HIGH;
-const int STEP_TO_PRESS_BOTTLE = 4000; // Number of step to have 40ml from bottle.
-const int MAX_STEP_BOTTLE = 0; // maximum step to push the arm of the dispenser.
-const int SPEED_BOTTLE = 3; //delay between each step.
-int STEP_TO_BOTTLE = 210; // Number of step between each bottle.
+#define PIN_STEP_BOTTLE 29  //Pin step bottle
+#define PIN_DIR_BOTTLE 28   //Pin direction bottle
+#define HIGH_BOTTLE LOW
+#define LOW_BOTTLE HIGH
+#define STEP_TO_PRESS_BOTTLE 4000 // Number of step to have 40ml from bottle.
+#define MAX_STEP_BOTTLE 0 // maximum step to push the arm of the dispenser.
+#define SPEED_BOTTLE 3 //delay between each step.
+#define STEP_TO_BOTTLE 210 // Number of step between each bottle.
 
 //ARM
-const int PIN_SLOT_ARM = 12; //red wire
+#define PIN_SLOT_ARM 12 //red wire
 
 //DIVERS
-const int MAX_VERRE_ML = 200; //Qt� maximale d'un verre.
+#define MAX_VERRE_ML 200 //Qt� maximale d'un verre.
 
 /** COCKTAILS **/
 
@@ -50,8 +50,7 @@ const int MAX_VERRE_ML = 200; //Qt� maximale d'un verre.
 typedef struct{
     String name;
     String author;
-    int avis; //avis de 0 a 5
-    int ingredient[10][2];//[num�ro ingr�dient][quantit�]
+    byte ingredient[10][2];//[num�ro ingr�dient][quantit�]
 }Cocktail;
 
 /* Liste des ingrédients
@@ -70,12 +69,12 @@ typedef struct{
 * 12 = Absinthe
 * 13 = Perrier
 */
-const char* INGREDIENTS[14] = {"vide", "vide", "vodka", "rhum", "Cointreau", "Orange juice", "Curacao", "Liquid cane sugar", "Lime juice", "Tequila", "Cranberry juice", "Bailey", "Absinthe", "Perrier"};
+const char* INGREDIENTS[14] = {"vide", "Tequila", "Vodka", "Rhum", "Cointreau", "Orange juice", "Curacao", "Liquid cane sugar", "Lime juice", "Love", "Cranberry juice", "Bailey", "Absinthe", "Perrier"};
 
 const int SIZEOF_BAR = 27;
 
 // Composition du carousel avec qté restante.
-int BAR[SIZEOF_BAR][2]={
+byte BAR[SIZEOF_BAR][2]={
   {8, 100}, // jus de citron
   {8, 100}, // jus de citron
   {4, 100}, // cointreau
@@ -91,7 +90,7 @@ int BAR[SIZEOF_BAR][2]={
   {7, 100}, //Sucre de canne liquide
   {5, 100}, // Jus d'orange
   {5, 100}, // Jus d'orange
-  {0, 100},
+  {9, 100}, // Love
   {0, 100},
   {0, 100},
   {0, 100},
@@ -100,59 +99,13 @@ int BAR[SIZEOF_BAR][2]={
   {0, 100},
   {0, 100},
   {2, 750}, // 22 Vodka
-  {9, 750}, // 23 Tequila
+  {1, 750}, // 23 Tequila
   {3, 750}, // 24 Rhum
   {13, 750} // 25 Perrier
 };
 
-const int NUMBER_OF_COCKTAILS = 1;
-Cocktail liste_cocktails[NUMBER_OF_COCKTAILS]; //increase with 
+//QueueArray <Cocktail> liste_cocktails;
 
-void initListeCocktails(){
-  //Init predefined cocktails.
-  //Attention : les alcools en bouteille ne peuvent avoir des dosages que de 40ml, 80ml, 120ml, etc etc
-  liste_cocktails[0].name="Margarita";
-  liste_cocktails[0].author="Margarita Sames";
-  liste_cocktails[0].avis=4;
-  liste_cocktails[0].ingredient[0][0]=9; liste_cocktails[0].ingredient[0][1]=40;//Tequila 4cl.
-  liste_cocktails[0].ingredient[1][0]=4; liste_cocktails[0].ingredient[1][1]=30;//Cointreau 30ml.
-  liste_cocktails[0].ingredient[2][0]=8; liste_cocktails[0].ingredient[2][1]=30;//Jus de citron 20ml.
-  
-  /*liste_cocktails[1].name="Cosmopolitan";
-  liste_cocktails[1].author="Cheryl Cook";
-  liste_cocktails[1].avis=4;
-  liste_cocktails[1].ingredient[0][0]=2; liste_cocktails[1].ingredient[0][1]=40;//Vodka 4cl.
-  liste_cocktails[1].ingredient[1][0]=4; liste_cocktails[1].ingredient[1][1]=20;//Cointreau 30ml.
-  liste_cocktails[1].ingredient[2][0]=10; liste_cocktails[1].ingredient[2][1]=20;//Jus de cranberry 20ml.
-  liste_cocktails[1].ingredient[3][0]=8; liste_cocktails[1].ingredient[3][1]=10;//Jus de citron 10ml.
-  
-  liste_cocktails[2].name="Cointreaupolitan";
-  liste_cocktails[2].author="Cointreau";
-  liste_cocktails[2].avis=3;
-  liste_cocktails[2].ingredient[0][0]=4; liste_cocktails[2].ingredient[0][1]=50;//Cointreau 50ml.
-  liste_cocktails[2].ingredient[1][0]=10; liste_cocktails[2].ingredient[1][1]=30;//Jus de cranberry 30ml.
-  liste_cocktails[2].ingredient[2][0]=8; liste_cocktails[2].ingredient[2][1]=20;//Jus de citron 20ml.
-  
-  liste_cocktails[3].name="Blue lagoon";
-  liste_cocktails[3].author="Andy MacElhone";
-  liste_cocktails[3].avis=4;
-  liste_cocktails[3].ingredient[0][0]=2; liste_cocktails[3].ingredient[0][1]=40;//Vodka 4cl.
-  liste_cocktails[3].ingredient[1][0]=6; liste_cocktails[3].ingredient[1][1]=30;//Curacao 30ml.
-  liste_cocktails[3].ingredient[2][0]=8; liste_cocktails[3].ingredient[2][1]=20;//Jus de citron 20ml.
-  
-  liste_cocktails[4].name="Head Shock";
-  liste_cocktails[4].author="Anonymous";
-  liste_cocktails[4].avis=4;
-  liste_cocktails[4].ingredient[0][0]=9; liste_cocktails[4].ingredient[0][1]=40;//Tequila 4cl (normalement 2 mais bon).
-  liste_cocktails[4].ingredient[1][0]=12; liste_cocktails[4].ingredient[1][1]=40;//Absinthe 40ml.
-  
-  liste_cocktails[5].name="Bob Marley Absinthe";
-  liste_cocktails[5].author="Jah";
-  liste_cocktails[5].avis=4;
-  liste_cocktails[5].ingredient[0][0]=13; liste_cocktails[5].ingredient[0][1]=80;//Perrier 8cl (normalement 6 mais bon).
-  liste_cocktails[5].ingredient[1][0]=12; liste_cocktails[5].ingredient[1][1]=30;//Absinthe 30ml.
-  liste_cocktails[5].ingredient[2][0]=5; liste_cocktails[5].ingredient[2][1]=30;//Jus d'orange 30ml.
-  liste_cocktails[5].ingredient[3][0]=7; liste_cocktails[5].ingredient[3][1]=20;//sucre de canne liquide 20ml.*/
-  
-  Serial.println(String("COCKTAILS AVALAIBLES :") + String(NUMBER_OF_COCKTAILS, DEC));
-}
+Cocktail liste_cocktails[50]; //Array of cocktail. 
+
+int NUMBER_OF_COCKTAILS = 0; // Number of cocktails in the list
