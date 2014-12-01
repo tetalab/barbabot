@@ -1,5 +1,5 @@
 /**
- * Modification of the original lib by GRBL to work on arduino mega whitout SoftwareSerial and only on Serial1.
+ * Modification of the original lib by GRBL to work on arduino mega whitout SoftwareSerial and only on Serial2.
  * 
  * Minitel library for Arduino (v0.1) / May 2013
  * http://github.com/01010101/Minitel
@@ -14,7 +14,6 @@
  * http://tetalab.org
  */
  
- #include "Arduino.h"
 #include "Minitel.h"
 
 byte _currentBgColor = BLACK;
@@ -28,8 +27,7 @@ boolean _currentShowCursor = false;
 
 
 Minitel::Minitel() {
-  
-	Serial1.begin(4800);
+	Serial2.begin(4800);
 	useDefaultColors();
 	refreshSettings();
 
@@ -66,7 +64,7 @@ void Minitel::serialprint7(byte b) {
   else {
     bitWrite(b,7,0); //ecriture de la partié
   }
-  Serial1.write(b); //ecriture du byte sur le software serial
+  Serial2.write(b); //ecriture du byte sur le software serial
 }
 
 
@@ -522,7 +520,7 @@ void Minitel::bip() {
 
 byte Minitel::getKeyCode() {
 	byte b = 255;
-	b = Serial1.read();		
+	b = Serial2.read();		
 	if (b != 255) {
 		Serial.println(b);
 	}
@@ -531,9 +529,9 @@ byte Minitel::getKeyCode() {
 
 char Minitel::getKey() {
   byte b = 255; 
-  /*while(Serial1.available() <= 0){
+  /*while(Serial2.available() <= 0){
   }*/
-   b =  Serial1.read();
+   b =  Serial2.read();
   char c = '^';
   //Serial.println(b);
   // Menu keys
@@ -969,17 +967,17 @@ void Minitel::spiral(int x, int y, int siz, int c) {
 
 String Minitel::getKey2() {
   byte b = 255; 
-  /*while(Serial1.available() <= 0){
+  /*while(Serial2.available() <= 0){
   }*/
   byte a = 255;
-  a =  Serial1.read();
+  a =  Serial2.read();
   String c = "";
   //Serial.println(b);
   // Menu keys
   if (a == 147) {
   	_menuKeyPressed = true;
   	delay(50);
-        b =  Serial1.read();
+        b =  Serial2.read();
   
   }else{
     b = a;

@@ -14,22 +14,21 @@
  License Rien à branler.
  License Do What The Fuck You Want.
  */
+
 #include "config.h"
+#include <SD.h>
+#include "sauvegarde.h"
+//#include "cupbot.h"
 
 /** VARIABLES */
-int carouselEndstopState = HIGH;         // State of endstop of the carousel.
 int positionCarousel = 0; // Number of step from endstop of the carousel = position of the carousel.
-
-int syringeEndstopState = HIGH;         // State of endstop of the syringe arminitel.
-int syringeContactStopState = HIGH;         // State of microswitch who push on syringe of the carousel.
 int positionSyringe = 0; // Number of step from endstop of the syringe = position of the syringe.
-
-int bottleEndstopState = 0;         // State of endstop of the bottle arminitel.
 int positionBottle = 0; // Number of step from endstop of the arm dedicated to bottle = position of the syringe.
 
-int armState = 0; //arm microswitch is pressed.
+byte armState = 0; //arm microswitch is pressed.
 
 Minitel minitel;
+
 
 void setup() 
 {                
@@ -39,22 +38,26 @@ void setup()
   pinMode(PIN_DIR_SYRINGE, OUTPUT); 
   pinMode(PIN_STEP_BOTTLE, OUTPUT);
   pinMode(PIN_DIR_BOTTLE, OUTPUT);  
+  pinMode(PIN_GYRO, OUTPUT);
   
   pinMode(PIN_CAROUSEL_ENDSTOP, INPUT);  
   pinMode(PIN_SYRINGE_ENDSTOP, INPUT);
   pinMode(PIN_SYRINGE_CONTACT, INPUT);
   pinMode(PIN_SLOT_ARM, INPUT);
   
+  
   // Serial for debugging
   Serial.begin(9600);
- 
+  
   //Init random generator
   randomSeed(analogRead(0));
   
-  loadCocktails();
+  
   minitel.useDefaultColors();
   minitel.refreshSettings();
   minitel.setMaxSpeed(); // FNCT + P and 4
+  //initCupBot();
+  initSD();
 }
 
 
@@ -66,6 +69,7 @@ void loop()
   initSyringe();
   initBottle();
   initCarousel();
+  loadCocktails();
   
   minitel.clearScreen();
   minitel.rect((byte)219, 9, 6, 24, 5);
@@ -74,9 +78,6 @@ void loop()
   minitel.text("PULL SLOT ARM TO PLAY.", 10, 16);
   minitel.noBlink();
   minitel.text("by Tetalab (http://tetalab.org)", 9, 24);
-  
-  DEBUG(String("armState =") + String(armState, DEC));
-  DEBUG(String("PIN_SLOT_ARM =") + String(digitalRead(PIN_SLOT_ARM), DEC));
   
   armState = digitalRead(PIN_SLOT_ARM);
   while(armState == 0){
@@ -91,28 +92,31 @@ void loop()
     randNumber = createCocktail();
   }
   
+  //printToCup("ROBOEXOTICA 2014", false);
+  Cocktail cocktail = loadCocktail(randNumber);
   minitel.clearScreen();
   minitel.text("NOW SERVING :", 8,8);
-  minitel.text(String(liste_cocktails[randNumber].name), 10,9);
-  minitel.text("by " + liste_cocktails[randNumber].author, 10, 10);
+  minitel.text(String(cocktail.name), 10,9);
+  minitel.text("by " + cocktail.author, 10, 10);
   
 
   //Let's do it.
-  makeCocktail(liste_cocktails[randNumber]);
+  makeCocktail(cocktail);
   delay(3000);
-
 }
 
 /*
 * Serve a cocktail.
 */
-void makeCocktail(Cocktail cocktail) 
+void makeCocktail(Cocktail &cocktail) 
 {
   DEBUG(String("begin make cocktail taille ingredient =") + String(sizeof(cocktail.ingredient[0]), DEC));
   
+  //Appel cupbot. 
+  
   //Put each ingredient.
   for(int i=0; i<sizeof(cocktail.ingredient[0]); i++){
-    if(cocktail.ingredient[i][0] != NULL){
+    if(cocktail.ingredient[i][0] != 0){
       minitel.text(String("Serving ") + String(cocktail.ingredient[i][1])+ String("ml of ")+ String(INGREDIENTS[cocktail.ingredient[i][0]]), 1 ,12+i);
       
       int slot = findAlcohol(cocktail.ingredient[i][0], cocktail.ingredient[i][1]);
@@ -176,11 +180,13 @@ void goToCarousel(int alcoolNumber)
   DEBUG(String("positionCarousel=") + String(positionCarousel, DEC));
   DEBUG(String("numberOfStepFromBegin=") + String(numberOfStepFromBegin, DEC));
   
+  
+  
   if(numberOfStepFromBegin > positionCarousel){//clockwise turn.
-    digitalWrite(PIN_DIR_CAROUSEL, HIGH_CAROUSEL);
+    digitalWrite(PIN_DIR_CAROUSEL, LOW);
     deltaStep = numberOfStepFromBegin - positionCarousel;
   }else{
-    digitalWrite(PIN_DIR_CAROUSEL, LOW_CAROUSEL);
+    digitalWrite(PIN_DIR_CAROUSEL, HIGH);
     deltaStep = positionCarousel - numberOfStepFromBegin;
   }
   
@@ -193,7 +199,6 @@ void goToCarousel(int alcoolNumber)
     digitalWrite(PIN_STEP_CAROUSEL, LOW);
   }
   positionCarousel = numberOfStepFromBegin;
-  
   DEBUG("end goToCarousel");
 }
 
@@ -209,8 +214,8 @@ void serveAlcohol(byte slot, byte quantity)
   if(slot<23){
     
     //Move until syringe switch
-    digitalWrite(PIN_DIR_SYRINGE, HIGH_SYRINGE);
-    syringeContactStopState = digitalRead(PIN_SYRINGE_CONTACT);
+    digitalWrite(PIN_DIR_SYRINGE, HIGH);
+    byte syringeContactStopState = digitalRead(PIN_SYRINGE_CONTACT);
     DEBUG(String("syringeContactStopState=") + String(syringeContactStopState, DEC));
     while(syringeContactStopState == 1 && numberOfStepFromBegin < MAX_STEP_SYRINGE){
       //Move on
@@ -243,7 +248,7 @@ void serveAlcohol(byte slot, byte quantity)
   }else{
     //In case of bottle (1 push of bottle = 40ml)
     for(int i = 0; i<(quantity/40);i++){
-      digitalWrite(PIN_DIR_BOTTLE, HIGH_BOTTLE);
+      digitalWrite(PIN_DIR_BOTTLE, LOW);
       for(int j = 0; j<STEP_TO_PRESS_BOTTLE; j++){
         //Move on
         digitalWrite(PIN_STEP_BOTTLE, HIGH);   
@@ -268,7 +273,7 @@ void serveAlcohol(byte slot, byte quantity)
 int rolling() 
 {
   DEBUG("demoRolling - debut");
-  minitel.clearScreen();
+  
   String cocktail1 = "";
   String cocktail2 = "";
   String cocktail3 = "";
@@ -276,7 +281,6 @@ int rolling()
   
   //Random cocktail
   int randNumber = random(NUMBER_OF_COCKTAILS);
-  DEBUG(String("randNumber1=") + String(randNumber, DEC));
   //Si jackpot 1 chance sur 2 de l'avoir).
   /*if(randNumber == 0){
     randNumber = random(2);
@@ -285,22 +289,20 @@ int rolling()
     }
   }*/
   //randNumber = 0;
-  DEBUG(String("randNumber2=") + String(randNumber, DEC));
   
-  //minitel.text("------------------------------", 5,9);
-  //minitel.text("------------------------------", 5,16);
+  minitel.clearScreen();
   minitel.text("Rolling!", 4, 8);
   minitel.rect((byte) 219, 4, 10, 30, 7);
   int cocktail = randNumber;
-  int nbLoop = (NUMBER_OF_COCKTAILS * 3) + 3;
-  
+  int nbLoop = (NUMBER_OF_COCKTAILS * 4) + 3;
+  int bip = 0;
   for(int i=0;i<nbLoop;i++)
   {
     //cocktail = NUMBER_OF_COCKTAILS - i >0 ? NUMBER_OF_COCKTAILS - i : 0;
     
     for(int j=5;j>0;j--)
     {
-        String name = liste_cocktails[cocktail].name;
+        String name = liste_cocktails[cocktail];
         for(int x=0;x<30 - name.length();x++){
           name = name + " ";
         }
@@ -311,11 +313,12 @@ int rolling()
         if(i == nbLoop - 1 && j == 3) minitel.noBlink();
         cocktail = cocktail + 1 >= NUMBER_OF_COCKTAILS ? 0 : cocktail+1;
     }
-    minitel.bip();
-    
+
+    //minitel.bip();
+       
     //delay for rolling
     unsigned long currentMillis = millis();
-    while(currentMillis - previousMillis <= (i+1)*40) {
+    while(currentMillis - previousMillis <= (i+1)*50) {
       currentMillis = millis();
     }
     previousMillis = currentMillis;   
@@ -323,9 +326,9 @@ int rolling()
   }
   //minitel.bip();
   delay(500);
-  minitel.bip();
+  //minitel.bip();
   delay(500);
-  minitel.bip();
+  //minitel.bip();
   delay(2000);
   
   DEBUG("demoRolling - fin");
@@ -339,20 +342,7 @@ int rolling()
 int demoJackpot() 
 {
   DEBUG("demoJackpot - debut");
-  /*minitel.clearScreen();
-  for(int y=1;y<24;y++){
-    for(int x=0;x<4;x++){
-      minitel.text("  JACKPOT!", x*10,y);
-      minitel.bip();
-      delay(100);
-    }
-  }
-  delay(2000);
-  minitel.clearScreen();
-  minitel.text("You win the right to create a cocktail", 1,10);
-  minitel.text("Leave your name in the cocktail History", 1, 11);
-  delay(4000);*/
-  
+  //digitalWrite(PIN_GYRO, 255);
   minitel.graphicMode();
   minitel.clearScreen();
   minitel.graphicMode();
@@ -376,8 +366,12 @@ int demoJackpot()
   minitel.bgColor(BLACK);
   minitel.text("IT'S JACKPOT TIME!", 8,1);
   delay(5000);
+  digitalWrite(PIN_GYRO, 0);
   minitel.clearScreen();
-
+  minitel.text("You win the right to create a cocktail", 1,10);
+  minitel.text("Leave your name in the History of cocktail", 1, 11);
+  delay(4000);
+  
   
   DEBUG("demoJackpot - fin");
 }
@@ -440,7 +434,7 @@ int createCocktail()
       
       //Validation et Confirmation saisie.
       if(nbIngredient.toInt() >= 1  && nbIngredient.toInt() <= 13){//OK
-        if(nbIngredient.toInt() >= 1 && nbIngredient.toInt()<=3 && remainingQty<=40){
+        if(nbIngredient.toInt() >= 1 && nbIngredient.toInt()<=4 && remainingQty<=40){
           //minitel.blink();
           minitel.clearLine(9);
           minitel.clearLine(10);
@@ -479,7 +473,7 @@ int createCocktail()
       quantity = "";
       minitel.clearLine(9);
       minitel.clearLine(10);
-      if(nbIngredient.toInt()<= 3){ //Ingredient in bottle.
+      if(nbIngredient.toInt()<= 4){ //Ingredient in bottle.
         minitel.text("Qty (40, 80, 120 or 160ml):             ", 1, 9);
         minitel.moveCursorTo(28, 9);
       }else{
@@ -495,7 +489,7 @@ int createCocktail()
       
       DEBUG(String("quantity=")+String(quantity));
       //validation saisie.
-      if(nbIngredient.toInt()>3){//Syringe case
+      if(nbIngredient.toInt()>4){//Syringe case
         if(quantity.toInt() >= 1  && quantity.toInt() <= 50){//OK
           bValidate = true;
         }else{
@@ -648,11 +642,10 @@ int createCocktail()
   minitel.text("Done! Let's taste your creation!       ", 1, 9);
   minitel.noCursor();
   
-  cocktailNumber = addToArrayCocktail (newCocktail);
   saveNewCocktail(newCocktail);
   
   delay(2000);
-  return cocktailNumber-1;
+  return NUMBER_OF_COCKTAILS - 1 ;
   DEBUG("createCocktail - fin");
 }
 
@@ -665,9 +658,9 @@ int initCarousel()
   DEBUG("begin init carousel");
   
   //While endstop not reach.
-  digitalWrite(PIN_DIR_CAROUSEL, LOW_CAROUSEL);
-  carouselEndstopState = digitalRead(PIN_CAROUSEL_ENDSTOP);
-  while(carouselEndstopState == 1){
+  digitalWrite(PIN_DIR_CAROUSEL, HIGH);
+  byte carouselEndstopState = digitalRead(PIN_CAROUSEL_ENDSTOP);
+  while(carouselEndstopState == HIGH){
     //Move on
     digitalWrite(PIN_STEP_CAROUSEL, HIGH);   
     delay(SPEED_CAROUSEL);
@@ -701,9 +694,9 @@ void initSyringe()
 {
   DEBUG("begin init syringe");
   //While endstop not reach.
-  digitalWrite(PIN_DIR_SYRINGE, LOW_SYRINGE);
-  syringeEndstopState = digitalRead(PIN_SYRINGE_ENDSTOP);
-  while(syringeEndstopState == 1){ //reversed microswitch
+  digitalWrite(PIN_DIR_SYRINGE, LOW);
+  byte syringeEndstopState = digitalRead(PIN_SYRINGE_ENDSTOP);
+  while(syringeEndstopState == HIGH){ //reversed microswitch
     //Move on
     digitalWrite(PIN_STEP_SYRINGE, HIGH);   
     delay(SPEED_SYRINGE);
@@ -722,7 +715,7 @@ void initBottle()
 {
   DEBUG("begin init bottle arm");
   //While endstop not reach.
-  digitalWrite(PIN_DIR_BOTTLE, LOW_BOTTLE);
+  digitalWrite(PIN_DIR_BOTTLE, HIGH);
   while(positionBottle > 0){
     //Move on
     digitalWrite(PIN_STEP_BOTTLE, HIGH);   
@@ -734,34 +727,8 @@ void initBottle()
   DEBUG("end init bottle arm");
 }
 
-/*
-* Retrieve from SD file the list of cocktails.
-*/
-void loadCocktails() 
-{
-  DEBUG("loadCocktails - debut");
-  
-  Cocktail jackpot;
-  jackpot.name="JACKPOT";
-  jackpot.author="jackpot";
-  
-  addToArrayCocktail(jackpot);
-  
-  
-  DEBUG("loadCocktails - fin");
-}
 
-/*
-* Save a new cocktail to SD file.
-*/
-void saveNewCocktail(Cocktail newCocktail) 
-{
-  DEBUG("saveNewCocktail - debut");
-  
-  
-  
-  DEBUG("saveNewCocktail - fin");
-}
+
 
 /*
 * Service mode
@@ -966,39 +933,4 @@ void rainbow(int x, int y) {
     minitel.graphic("111111");
     minitel.repeat(2);
   }
-}
-
-int addToArrayCocktail (Cocktail item)
-{
-  DEBUG("AddToArrayCocktail debut");
-  /*
-  if(NUMBER_OF_COCKTAILS == num_allocated) { // Are more refs required?
-    if (num_allocated == 0)
-              num_allocated = 1; // Start off with 3 refs
-          else
-              num_allocated *= 2; // Double the number of refs allocated
-  
-    // Make the reallocation transactional 
-    // by using a temporary variable first
-    Cocktail *_tmp = (Cocktail*)realloc(liste_cocktails, (num_allocated  * sizeof(Cocktail)));
-  
-   
-    // If the reallocation didn't go so well,
-    // inform the user and bail out
-    if (!_tmp)
-    {
-            DEBUG("ERROR: Couldn't realloc memory!\n");
-            return(-1);
-    }
-    // Things are looking good so far
-    liste_cocktails = (Cocktail*)_tmp;
-    liste_cocktails[NUMBER_OF_COCKTAILS] = item;
-    NUMBER_OF_COCKTAILS++;
-  }*/
-  liste_cocktails[NUMBER_OF_COCKTAILS] = item;
-  NUMBER_OF_COCKTAILS++;
-  
-  
-  DEBUG("AddToArrayCocktail fin");
-  return NUMBER_OF_COCKTAILS;
 }
