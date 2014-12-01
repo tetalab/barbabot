@@ -2,7 +2,7 @@
  CUPBOT
  
  Program to draw dick on a plastic cup
- Tested with arduino Mega on Serial2 with other Mega who run modified MakerBlock XY Plotter firmware (modified to run on Serial2).
+ Tested with arduino Mega on Serial1 with other Mega who run modified MakerBlock XY Plotter firmware (modified to run on Serial2).
  Created 27 November 2014 : V.0
  by Flo Gales.
 
@@ -10,336 +10,164 @@
  License Do What The Fuck You Want.
  */
 
-char* SYMBOLES[36][15]={
-{"0",
-"G0 X0 Y23.333",
-"G1 Z-1",
-"G2 X13.333 Y23.333 I6.667 J0",
-"G1 X13.333 Y6.667",
-"G2 X0 Y6.667 I-6.667 J0",
-"G1 X0 Y23.333"},
+#include <Servo.h>
+#include "cupbot.h"
 
-{"1",
-"G0 X0 Y23.333",
-"G1 Z-1",
-"G1 X6.667 Y30",
-"G1 X6.667 Y0"},
+// define the parameters of our machine.
+float X_STEPS_PER_INCH = 48;
+float X_STEPS_PER_MM = 40;
+int X_MOTOR_STEPS   = 100;
 
-{"2",
-"G0 X0 Y23.333",
-"G1 Z-1",
-"G2 X12.327 Y19.811 I6.667 J0",
-"G1 X0 Y0",
-"G1 X13.333 Y0"},
+float Y_STEPS_PER_INCH = 48;
+float Y_STEPS_PER_MM  = 40;
+int Y_MOTOR_STEPS   = 100;
 
-{"3",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X8.333 Y30",
-"G2 X13.333 Y25 I0 J-5",
-"G1 X13.333 Y21.667",
-"G2 X8.333 Y16.667 I-5 J0",
-"G1 X3.333 Y16.667",
-"G0 Z2",
-"G0 X8.333 Y16.667",
-"G1 Z-1",
-"G2 X13.333 Y11.667 I0 J-5",
-"G1 X13.333 Y5",
-"G2 X8.333 Y0 I-5 J0",
-"G1 X0 Y0"},
+float Z_STEPS_PER_INCH = 48;
+float Z_STEPS_PER_MM   = 40;
+int Z_MOTOR_STEPS    = 100;
 
-{"4",
-"G0 X6.667 Y30",
-"G1 Z-1",
-"G1 X0 Y6.667",
-"G1 X13.333 Y6.667",
-"G0 Z2",
-"G0 X11.667 Y0",
-"G1 Z-1",
-"G1 X11.667 Y13.333"},
+//our maximum feedrates
+long FAST_XY_FEEDRATE = 2000;
+long FAST_Z_FEEDRATE = 2000;
 
-{"5",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X8.333 Y0",
-"G3 X13.333 Y5 I0 J5",
-"G1 X13.333 Y11.667",
-"G3 X8.333 Y16.667 I-5 J0",
-"G1 X0 Y16.667",
-"G1 X0 Y30",
-"G1 X13.333 Y30"},
+// Units in curve section
+#define CURVE_SECTION_INCHES 0.019685
+#define CURVE_SECTION_MM 0.5
 
-{"6",
-"G0 X0 Y10",
-"G1 Z-1",
-"G2 X13.333 Y10 I6.667 J0",
-"G1 X13.333 Y6.667",
-"G2 X0 Y6.667 I-6.667 J0",
-"G1 X0 Y10",
-"G2 X10 Y30 I25 J0"},
+// Set to one if sensor outputs inverting (ie: 1 means open, 0 means closed)
+// RepRap opto endstops are *not* inverting.
+int SENSORS_INVERTING = 1;
 
-{"7",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X13.333 Y30",
-"G1 X5 Y0",
-"G0 Z2",
-"G0 X6.667 Y16.667",
-"G1 Z-1",
-"G1 X13.333 Y16.667"},
-
-{"8",
-"G0 X6.667 Y16.667",
-"G1 Z-1",
-"G3 X6.667 Y30 I0 J6.667",
-"G3 X6.667 Y16.667 I0 J-6.667",
-"G2 X13.333 Y10 I0 J-6.667",
-"G1 X13.333 Y6.667",
-"G2 X0 Y6.667 I-6.667 J0",
-"G1 X0 Y10",
-"G2 X6.667 Y16.667 I6.667 J0"},
-
-{"9",
-"G0 X3.333 Y0",
-"G1 Z-1",
-"G3 X13.333 Y20 I-15 J20",
-"G1 X13.333 Y23.333",
-"G3 X0 Y23.333 I-6.667 J0",
-"G1 X0 Y20",
-"G3 X13.333 Y20 I6.667 J0"},
-
-{"A",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X10 Y30",
-"G1 X20 Y0",
-"G0 Z2",
-"G0 X17.222 Y8.333",
-"G1 Z-1",
-"G1 X2.778 Y8.333"},
-
-{"B",
-"G0 X0 Y16.667",
-"G1 Z-1",
-"G1 X8.333 Y16.667",
-"G3 X8.333 Y30 I0 J6.667",
-"G1 X0 Y30",
-"G1 X0 Y0",
-"G1 X8.333 Y0",
-"G3 X8.333 Y16.667 I0 J8.333"},
-
-{"C",
-"G0 X13.333 Y0",
-"G1 Z-1",
-"G1 X8.333 Y0",
-"G2 X0 Y8.333 I0 J8.333",
-"G1 X0 Y21.667",
-"G2 X8.333 Y30 I8.333 J0",
-"G1 X13.333 Y30"},
-
-{"D",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X8.333 Y30",
-"G2 X16.667 Y21.667 I0 J-8.333",
-"G1 X16.667 Y8.333",
-"G2 X8.333 Y0 I-8.333 J0",
-"G1 X0 Y0"},
-
-{"E",
-"G0 X13.333 Y0",
-"G1 Z-1",
-"G1 X0 Y0",
-"G1 X0 Y16.667",
-"G1 X10 Y16.667",
-"G0 Z2",
-"G0 X0 Y16.667",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X13.333 Y30"},
-
-{"F",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y16.667",
-"G1 X13.333 Y16.667",
-"G0 Z2",
-"G0 X0 Y16.667",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X13.333 Y30"},
-
-{"G",
-"G0 X13.333 Y16.667",
-"G1 Z-1",
-"G1 X16.667 Y16.667",
-"G1 X16.667 Y0",
-"G1 X8.333 Y0",
-"G2 X0 Y8.333 I0 J8.333",
-"G1 X0 Y21.667",
-"G2 X8.333 Y30 I8.333 J0",
-"G1 X16.667 Y30"},
-
-{"H",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G0 Z2",
-"G0 X0 Y16.667",
-"G1 Z-1",
-"G1 X16.667 Y16.667",
-"G0 Z2",
-"G0 X16.667 Y0",
-"G1 Z-1",
-"G1 X16.667 Y30"},
-
-{"I",
-"G0 X1.667 Y0",
-"G1 Z-1",
-"G1 X1.667 Y30"},
-
-{"J",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X1.667 Y0",
-"G3 X10 Y8.333 I0 J8.333",
-"G1 X10 Y30"},
-
-{"K",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G0 Z2",
-"G0 X0 Y13.333",
-"G1 Z-1",
-"G1 X16.667 Y30",
-"G0 Z2",
-"G0 X3.333 Y16.667",
-"G1 Z-1",
-"G1 X16.667 Y0"},
-
-{"L",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X0 Y0",
-"G1 X13.333 Y0"},
-
-{"M",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X10 Y13.333",
-"G1 X20 Y30",
-"G1 X20 Y0"},
-
-{"N",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X16.667 Y0",
-"G1 X16.667 Y30"},
-
-{"O",
-"G0 X0 Y21.667",
-"G1 Z-1",
-"G2 X16.667 Y21.667 I8.333 J0",
-"G1 X16.667 Y8.333",
-"G2 X0 Y8.333 I-8.333 J0",
-"G1 X0 Y21.667"},
-
-{"P",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X8.333 Y30",
-"G2 X8.333 Y13.333 I0 J-8.333",
-"G1 X0 Y13.333"},
-
-{"Q",
-"G0 X0 Y21.667",
-"G1 Z-1",
-"G2 X16.667 Y21.667 I8.333 J0",
-"G1 X16.667 Y8.333",
-"G2 X0 Y8.333 I-8.333 J0",
-"G1 X0 Y21.667",
-"G0 Z2",
-"G0 X10 Y6.667",
-"G1 Z-1",
-"G1 X20 Y0"},
-
-{"R",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X0 Y30",
-"G1 X8.333 Y30",
-"G2 X8.333 Y13.333 I0 J-8.333",
-"G1 X0 Y13.333",
-"G0 Z2",
-"G0 X8.333 Y13.333",
-"G1 Z-1",
-"G1 X16.667 Y0"},
-
-{"S",
-"G0 X0 Y8.333",
-"G1 Z-1",
-"G3 X8.333 Y16.667 I8.333 J0",
-"G2 X15 Y23.333 I0 J6.667"},
-
-{"T",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X16.667 Y30",
-"G0 Z2",
-"G0 X8.333 Y30",
-"G1 Z-1",
-"G1 X8.333 Y0"},
-
-{"U",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X0 Y8.333",
-"G3 X16.667 Y8.333 I8.333 J0",
-"G1 X16.667 Y30"},
-
-{"V",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X10 Y0",
-"G1 X20 Y30"},
-
-{"W",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X6.667 Y0",
-"G1 X13.333 Y20",
-"G1 X20 Y0",
-"G1 X26.667 Y30"},
-
-{"X",
-"G0 X0 Y0",
-"G1 Z-1",
-"G1 X20 Y30",
-"G0 Z2",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X20 Y0"},
-
-{"Y",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X10 Y16.667",
-"G1 X10 Y0",
-"G0 Z2",
-"G0 X10 Y16.667",
-"G1 Z-1",
-"G1 X20 Y30"},
-
-{"Z",
-"G0 X0 Y30",
-"G1 Z-1",
-"G1 X20 Y30",
-"G1 X0 Y0",
-"G1 X20 Y0"}};
+// How many temperature samples to take.  each sample takes about 100 usecs.
 
 
+/****************************************************************************************
+* digital i/o pin assignment
+*
+* this uses the undocumented feature of Arduino - pins 14-19 correspond to analog 0-5
+****************************************************************************************/
+
+int X_STEP_PIN = 25;
+int X_DIR_PIN = 24;
+int X_ENABLE_PIN = 4;
+int X_MIN_PIN = A4;
+int X_MAX_PIN = A5;
+
+int Y_STEP_PIN = 27;
+int Y_DIR_PIN = 26;
+int Y_ENABLE_PIN = 4;
+int Y_MIN_PIN = A1;
+int Y_MAX_PIN = A0;
+
+int Z_STEP_PIN = 10;//A3 => 40
+int Z_DIR_PIN = 9;
+int Z_ENABLE_PIN = 4;
+int Z_MIN_PIN = A1;
+int Z_MAX_PIN = A0;
+int Z_ENABLE_SERVO = 1;
+#define COMMAND_SIZE 128
+
+char commands[COMMAND_SIZE];
+byte Serial2_count;
+int no_data = 0;
+
+Servo servo;
+
+int currentPosServo = 90;
+int targetPosServo = 90;
+bool comment = false;
+void setup()
+{
+    //Do startup stuff here
+    Serial.begin(9600);
+    Serial1.begin(115200);
+    if(Z_ENABLE_SERVO==1){
+      servo.attach(Z_STEP_PIN);
+    }
+    //other initialization.
+    init_process_string();
+    init_steppers();
+    process_string("G90",3);//Absolute Position
+    Serial1.println("start");
+    Serial.println("go");
+}
+
+void loop()
+{
+      char* texte[3]={"ROBOEXOTICA 2015", "TOTO SOLDE", "80ML OF VODKA"};
+      char* gcode;
+      
+      //texte = waitForText();
+      int i = 0;
+      Serial.println("loop");
+      while(strlen(texte[i]) > 0 && i < 3){
+        //génération du gcode lettre par lettre et exécution.
+        for(int iLettre = 0; iLettre < strlen(texte[i]); iLettre++){
+          
+          boolean bNewLine = iLettre == 0 && i > 0 ? true : false;
+          char* gcode = generateGCodeStream(texte[i][iLettre], bNewLine);
+          
+          char c;
+          
+          //Lecture du gcode produit.
+          for(int j = 0; j < sizeof(gcode); j++)
+          {
+            c = gcode[j];
+            no_data = 0;
+            //newlines are ends of commands.
+            if (c != '\n')
+            {
+                if(c==0x18){
+                    Serial1.println("Grbl 1.0");
+                }else{
+                  if (c == '('){
+                    comment = true;
+                  }
+                  // If we're not in comment mode, add it to our array.
+                  if (!comment)
+                  {
+                    commands[Serial2_count] = c;
+                    Serial2_count++;
+                  }
+                  if (c == ')'){
+                    comment = false; // End of comment - start listening again
+                  }
+                }
+            }else{
+              //process our command!
+              //process_string(commands, Serial2_count);
+              //clear command.
+              //init_process_string();
+            }
+          }
+        }
+        i++;
+      }
+      //disable_steppers();
+      delay(3000);
+   
+}
+
+char* waitForText(){
+  char* lignes[13];
+  int i = 0;
+  int j = 0;
+  boolean bEOT = false;
+  
+  while (!bEOT){
+    if(Serial1.available() > 0){
+      char c = Serial1.read();
+      if(c == 4){//EOT fin de transmission.
+        bEOT = true;
+      }else{
+        lignes[i][j]= c;
+        if(c == '\n'){
+          i++;
+          j = 0;
+        }else{
+          j++;
+        }
+      }
+    }
+  }
+}

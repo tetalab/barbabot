@@ -18,7 +18,6 @@
 #include "config.h"
 #include <SD.h>
 #include "sauvegarde.h"
-//#include "cupbot.h"
 
 /** VARIABLES */
 int positionCarousel = 0; // Number of step from endstop of the carousel = position of the carousel.
@@ -48,7 +47,8 @@ void setup()
   
   // Serial for debugging
   Serial.begin(9600);
-  
+  //Serial for cupbot
+  Serial1.begin(115200);
   //Init random generator
   randomSeed(analogRead(0));
   
@@ -128,7 +128,9 @@ void makeCocktail(Cocktail &cocktail)
       }
     }
   }
-  minitel.text("DONE! ENJOY!", 15 ,5);
+  minitel.blink();
+  minitel.text("DONE! ENJOY!", 17 ,4);
+  minitel.noBlink();
   DEBUG("end make cocktail");
 }
 

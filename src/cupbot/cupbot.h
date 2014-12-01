@@ -32,67 +32,97 @@
    return result;
  }
  
- char* generateGCodeStream(char* mot, boolean newLine){
-   Serial1.println("generateGCodeStream - debut");
-   String gcode;
+  int strpos(char *haystack, char *needle)
+  {
+     char *p = strstr(haystack, needle);
+     if (p)
+        return p - haystack;
+     return -1;
+  }
+  
+  char *substring(size_t start, size_t stop, const char *src, char *dst, size_t size)
+  {
+     int count = stop - start;
+     if ( count >= --size )
+     {
+        count = size;
+     }
+     sprintf(dst, "%.*s", count, src + start);
+     return dst;
+  }
+ 
+ char* generateGCodeStream(char lettre, boolean newLine){
+   Serial.println("generateGCodeStream - debut");
+   Serial.println("LETTRE=" + lettre);
+   char* gcode;
    
    if(newLine){
      posY += 10;
    }
    
-   for(int i = 0; i < sizeof(mot); i++){
-     gcode += "G0 Z2\n";
-     
-     //décalage entre les lettres.
-     if(i==0 && posX>0){
-       posX += 10;
-     } 
-     
-     //Recup du symbole.
-     for(int j = 0; j < 45; j++){
-       boolean bTrouve = false;
-       if(mot[i] == SYMBOLES[j][0][0]){
-          //parcours des commandes et calcul des offsets.
-          for(int k = 0; k < 15; k++){
-            if(SYMBOLES[j][k] != NULL){
-              gcode += "G";
-              String tmp = charToString(SYMBOLES[j][k]);
-              int startX = tmp.indexOf('X');
-              int startY = tmp.indexOf('Y');
-              int startI = tmp.indexOf('I');
-              
-              if(startX != -1){//Si mouvement en X et Y
-                int x = tmp.substring(startX, startY - 1).toInt();
-                int y = 0;
-                if(tmp.indexOf('I') != -1){
-                  y = tmp.substring(startY, startI - 1).toInt();
-                }else{
-                  y = tmp.substring(startY).toInt();
-                }
-                
-                //Offset par rapport à la position actuelle de la tête.
-                posX += x;
-                posY += y;
-                gcode += tmp.substring(0, startX) + String(posX) + " Y"+ String(posY);
-                if(startI != 1){
-                  gcode += " " + tmp.substring(0, startI);
-                }
-                
-              }else{//Sinon axe Z et on prend la commande telle quelle
-                gcode += charToString(SYMBOLES[j][k]);
+   //décalage entre les lettres.
+   posX += 10;
+   
+   strcat(gcode, "G0 Z2\n");
+
+   //Recup du symbole.
+   for(int j = 0; j < 45; j++){
+     boolean bTrouve = false;
+     if(lettre == SYMBOLES[j][0][0]){
+        //parcours des commandes et calcul des offsets.
+        for(int k = 0; k < 15; k++){
+          if(SYMBOLES[j][k] != NULL){
+            strcat(gcode,"G");
+            
+            int startX = strpos(SYMBOLES[j][k], "X\0");
+            int startY = strpos(SYMBOLES[j][k], "Y\0");
+            int startI = strpos(SYMBOLES[j][k], "I\0");
+            
+            if(startX != -1){//Si mouvement en X et Y
+              char x[4];
+              substring(startX, startY - 1, SYMBOLES[j][k], x, sizeof x);
+              char y[4]="0\0";
+              if(startI != -1){
+                //y = tmp.substring(startY, startI - 1).toInt();
+                substring(startY, startI - 1, SYMBOLES[j][k], y, sizeof y);
+              }else{
+                //y = tmp.substring(startY).toInt();
+                substring(startY, strlen(SYMBOLES[j][k]), SYMBOLES[j][k], y, sizeof y);
               }
               
+              //Offset par rapport à la position actuelle de la tête.
+              posX += atoi(x);
+              posY += atoi(y);
+              char debut[10];
+              substring(0, startX, SYMBOLES[j][k], debut, sizeof debut);
+              strcat(gcode,debut);
+              strcat(gcode, itoa(posX, x, 10));
+              strcat(gcode, " Y");
+              strcat(gcode, itoa(posY, y, 10));
+              
+              //gcode += substring(0, startX) + String(posX) + " Y"+ String(posY);
+              
+              if(startI != 1){
+                char fin[10];
+                substring(startI, strlen(SYMBOLES[j][k]), SYMBOLES[j][k], fin, sizeof fin);
+                strcat(gcode,fin);
+                //gcode += " " + tmp.substring(0, startI);
+              }
+              
+            }else{//Sinon axe Z et on prend la commande telle quelle
+              strcat(gcode,SYMBOLES[j][k]);
             }
             
           }
-       }else{//Si symbole non trouvé on génére un espace.
-         
-       }
+          
+        }
+     }else{//Si symbole non trouvé on génére un espace.
        
      }
-     gcode += "\n";
-     Serial1.println("GCODE="+String(gcode));
+     
    }
-   
-   Serial1.println("generateGCodeStream - fin");
+   strcat(gcode,"\n");
+   Serial.println("GCODE="+String(gcode));
+   Serial.println("generateGCodeStream - fin");
+   return gcode;
  }
