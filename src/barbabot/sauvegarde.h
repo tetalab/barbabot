@@ -45,18 +45,20 @@ void saveNewCocktail(Cocktail newCocktail)
   //Serial.println("saveNewCocktail - debut");
   File myFile;
   myFile = SD.open("barbabot.txt", FILE_WRITE);
-  
+  newCocktail.name.toUpperCase();
+  newCocktail.author.toUpperCase();
   String ligne = newCocktail.name + "," + newCocktail.author;
   
   for(int i = 0 ; i<10;i++){
     ligne += ","+ String(newCocktail.ingredient[i][0], DEC) +","+ String(newCocktail.ingredient[i][1], DEC);
   }
   ligne = ligne + "\n";
-  Serial.println("ligne="+ligne);
+  
   myFile.println(ligne);
   myFile.close();
-  
-  liste_cocktails[NUMBER_OF_COCKTAILS] = newCocktail.name;
+  char* name;
+  newCocktail.name.toCharArray(name, newCocktail.name.length());
+  strcpy(liste_cocktails[NUMBER_OF_COCKTAILS], name);
   NUMBER_OF_COCKTAILS++;
   
   //Serial.println("saveNewCocktail - fin");
@@ -71,7 +73,10 @@ boolean readCurrentLineToCocktail(Cocktail &cocktail, File myFile)
   
   char car = myFile.read();
   String ligneCSV;
-
+  
+  cocktail.name="";
+  cocktail.author="";
+  
   while(car != '\n' && car != -1){
     ligneCSV += car;
     car = myFile.read(); 
@@ -113,14 +118,14 @@ boolean readCurrentLineToCocktail(Cocktail &cocktail, File myFile)
 /*
 * Retrieve from SD file the list of cocktails.
 */
-Cocktail loadCocktail(int numOfCocktail)
+Cocktail loadCocktail(byte numOfCocktail)
 {
   //Serial.println("loadCocktails - debut");
   File myFile = SD.open("barbabot.txt", FILE_READ);
   
   Cocktail cocktail;
   boolean bEndOfFile = false;
-  int i = 0;
+  byte i = 0;
   while(!bEndOfFile && i<numOfCocktail){
     bEndOfFile = readCurrentLineToCocktail(cocktail, myFile);
     i++;
@@ -138,19 +143,29 @@ Cocktail loadCocktail(int numOfCocktail)
 void loadCocktails() 
 {
   //Serial.println("loadCocktails - debut");
+  
   NUMBER_OF_COCKTAILS = 0;
   File myFile = SD.open("barbabot.txt", FILE_READ);
-  
   Cocktail cocktail;
-  liste_cocktails[NUMBER_OF_COCKTAILS] = "JACKPOT";
+  
+  strcpy(liste_cocktails[NUMBER_OF_COCKTAILS], "JACKPOT");
   
   boolean bEndFile = false;
   bEndFile = readCurrentLineToCocktail(cocktail, myFile);
   while(!bEndFile){
-    NUMBER_OF_COCKTAILS++;
-    liste_cocktails[NUMBER_OF_COCKTAILS] = cocktail.name;
+    if(cocktail.name.length() > 0){
+      NUMBER_OF_COCKTAILS++;
+      char name[31];
+      cocktail.name.toCharArray(name, cocktail.name.length()+1);
+      strcpy(liste_cocktails[NUMBER_OF_COCKTAILS], name);
+    }
     bEndFile = readCurrentLineToCocktail(cocktail, myFile);
   }
+  NUMBER_OF_COCKTAILS++;
+  for(int i = 0; i<NUMBER_OF_COCKTAILS;i++){
+    Serial.println( liste_cocktails[i]);
+  }
+  
   
   myFile.close();
   

@@ -103,6 +103,6 @@ byte BAR[SIZEOF_BAR][2]={
 
 //QueueArray <Cocktail> liste_cocktails;
 
-String liste_cocktails[40]; //Array of cocktail. 
+char liste_cocktails[40][31]; //Array of cocktail. (max 40 cocktails)
 
-int NUMBER_OF_COCKTAILS = 0; // Number of cocktails in the list
+byte NUMBER_OF_COCKTAILS = 0; // Number of cocktails in the list
